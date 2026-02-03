@@ -21,8 +21,7 @@ return new class extends Migration
         $table->string('slug')->unique();      // Adres URL
         $table->string('image')->nullable();   // Zdjęcie (może być puste)
         $table->text('content');               // Długa treść artykułu
-        $table->boolean('is_published')->default(false); // Czy opublikowany?
-        
+        $table->string('status')->default('draft'); 
         $table->timestamps();
     });
     }

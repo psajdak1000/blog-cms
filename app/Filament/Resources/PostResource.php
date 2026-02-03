@@ -3,41 +3,56 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\PostResource\Pages;
-use App\Filament\Resources\PostResource\RelationManagers;
 use App\Models\Post;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+// Importy komponentów formularza
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Toggle;
+// Importy kolumn tabeli i filtrów
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter; // <--- To jest ważne dla filtrów
 
 class PostResource extends Resource
 {
     protected static ?string $model = Post::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('category_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('title')
+                TextInput::make('title')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('slug')
+                
+                // Wybór kategorii (korzysta z relacji, którą zrobiliśmy w modelach)
+                Select::make('category_id')
+                    ->label('Kategoria')
+                    ->relationship('category', 'name')
+                    ->required(),
+
+                TextInput::make('slug')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\FileUpload::make('image')
-                    ->image(),
-                Forms\Components\Textarea::make('content')
-                    ->required()
-                    ->columnSpanFull(),
-                Forms\Components\Toggle::make('is_published')
+
+                // Przełącznik statusu (Opublikowany TAK/NIE)
+                Toggle::make('status')
+                    ->label('Opublikowany')
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->default(false),
+
+                // Edytor tekstu (na całą szerokość)
+                RichEditor::make('content')
+                    ->columnSpanFull()
                     ->required(),
             ]);
     }
@@ -46,27 +61,36 @@ class PostResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('category_id')
-                    ->numeric()
+                TextColumn::make('title')
+                    ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('title')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('slug')
-                    ->searchable(),
-                Tables\Columns\ImageColumn::make('image'),
-                Tables\Columns\IconColumn::make('is_published')
-                    ->boolean(),
-                Tables\Columns\TextColumn::make('created_at')
+                
+                TextColumn::make('category.name')
+                    ->label('Kategoria')
+                    ->sortable(),
+                
+                // Ikona statusu (ptaszek lub krzyżyk)
+                IconColumn::make('status')
+                    ->boolean()
+                    ->label('Opublikowany?'),
+
+                TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
             ])
             ->filters([
-                //
+                // Filtr po Kategorii
+                SelectFilter::make('category_id')
+                    ->label('Kategoria')
+                    ->relationship('category', 'name'),
+
+                // Filtr po Statusie
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'published' => 'Opublikowany',
+                        'draft' => 'Szkic',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
